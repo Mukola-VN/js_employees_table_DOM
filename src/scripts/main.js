@@ -4,17 +4,15 @@ const table = document.querySelector('table');
 const tbody = table.querySelector('tbody');
 const th = document.querySelectorAll('thead th');
 
+// ================= SORT =================
 th.forEach((thItem, thIndex) => {
   thItem.addEventListener('click', () => {
-    // Визначити напрямок сортування
     const direction = thItem.dataset.direction === 'asc' ? 'desc' : 'asc';
 
     thItem.dataset.direction = direction;
 
-    // Отримати всі рядки
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
-    // Сортувати рядки
     rows.sort((a, b) => {
       const cellA = a.cells[thIndex].textContent.trim();
       const cellB = b.cells[thIndex].textContent.trim();
@@ -22,24 +20,22 @@ th.forEach((thItem, thIndex) => {
       const numA = Number(cellA.replace(/[$,]/g, ''));
       const numB = Number(cellB.replace(/[$,]/g, ''));
 
-      const isNumberA = !isNaN(numA) && numA !== 0 && cellA.match(/^\d/);
-      const isNumberB = !isNaN(numB) && numB !== 0 && cellB.match(/^\d/);
+      const bothNumbers = !isNaN(numA) && !isNaN(numB);
 
-      if (isNumberA && isNumberB) {
+      if (bothNumbers) {
         return direction === 'asc' ? numA - numB : numB - numA;
       }
 
       return direction === 'asc'
         ? cellA.localeCompare(cellB)
-        : -cellA.localeCompare(cellB);
+        : cellB.localeCompare(cellA);
     });
 
-    // Перевставити відсортовані рядки
     rows.forEach((row) => tbody.appendChild(row));
   });
 });
 
-// Виділення рядка при кліку
+// ================= ROW SELECT =================
 tbody.addEventListener('click', (e) => {
   const clickedRow = e.target.closest('tr');
   const selectedRow = tbody.querySelector('.active');
@@ -55,68 +51,75 @@ tbody.addEventListener('click', (e) => {
   clickedRow.classList.add('active');
 });
 
-// form
+// ================= NOTIFICATION =================
+function showNotification(message, type) {
+  const oldNotification = document.querySelector('[data-qa="notification"]');
 
-// створюю form
+  if (oldNotification) {
+    oldNotification.remove();
+  }
+
+  const notification = document.createElement('div');
+
+  notification.textContent = message;
+  notification.classList.add(type); // error | success
+  notification.setAttribute('data-qa', 'notification');
+
+  document.body.append(notification);
+
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+
+// ================= FORM =================
 const form = document.createElement('form');
 
-// додаю до неї class = "new-employee-form"
 form.classList.add('new-employee-form');
-
-// додаю усі label у один масив для того 
-// щоб використати їх та присвоїти значення
 
 const fields = [
   {
     label: 'Name:',
     type: 'text',
-    id: 'Name',
+    name: 'name',
     qa: 'name',
   },
   {
     label: 'Position:',
     type: 'text',
-    id: 'Position',
+    name: 'position',
     qa: 'position',
   },
   {
     label: 'Office:',
-    type: 'text',
-    id: 'office',
+    type: 'select',
+    name: 'office',
     qa: 'office',
   },
   {
     label: 'Age:',
     type: 'number',
-    id: 'Age',
+    name: 'age',
     qa: 'age',
   },
   {
     label: 'Salary:',
     type: 'number',
-    id: 'Salary',
+    name: 'salary',
     qa: 'salary',
   },
 ];
 
-// через forEach витягую значення з кожного
-// fields та додаю їх до label та input
-
 fields.forEach((field) => {
-  // тут створюю сам label
   const label = document.createElement('label');
 
-  label.textContent = field.label;
-  // присвоюю значення яке у масиві fields до label
-  // (значення попадає туди через парамент field
-  // який я додаю у forEach)
+  label.textContent = field.label + ' ';
 
-  if (field.id === 'office') {
+  if (field.type === 'select') {
     const select = document.createElement('select');
 
-    select.name = field.qa;
-    select.setAttribute('data-qa', field.qa);
-    select.setAttribute('autocomplete', field.qa);
+    select.name = field.name;
+    select.dataset.qa = field.qa;
 
     const cities = [
       'Tokyo',
@@ -140,16 +143,86 @@ fields.forEach((field) => {
     const input = document.createElement('input');
 
     input.type = field.type;
-    input.name = field.qa;
-    input.setAttribute('data-qa', field.qa);
-    input.setAttribute('autocomplete', field.qa);
+    input.name = field.name;
+    input.dataset.qa = field.qa;
 
     label.appendChild(input);
   }
 
-  // тут додаю labet та input до form
-
   form.appendChild(label);
-  document.body.append(form);
 });
-//
+
+const button = document.createElement('button');
+
+button.type = 'submit';
+button.textContent = 'Save to table';
+form.appendChild(button);
+
+document.body.append(form);
+
+// ================= ADD TO TABLE =================
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const inputs = form.querySelectorAll('input, select');
+  const formData = {};
+
+  inputs.forEach((input) => {
+    formData[input.name] = input.value.trim();
+  });
+
+  // ===== VALIDATION =====
+  if (formData.name.length < 4) {
+    showNotification('Name must be at least 4 characters', 'error');
+
+    return;
+  }
+
+  if (!formData.position) {
+    showNotification('Position is required', 'error');
+
+    return;
+  }
+
+  if (formData.age < 18) {
+    showNotification('Age must be at least 18', 'error');
+
+    return;
+  }
+
+  if (formData.age > 90) {
+    showNotification('Age must be less than 90', 'error');
+
+    return;
+  }
+
+  if (!formData.salary) {
+    showNotification('Salary is required', 'error');
+
+    return;
+  }
+
+  // ===== ADD ROW =====
+  const tr = document.createElement('tr');
+
+  const values = [
+    formData.name,
+    formData.position,
+    formData.office,
+    formData.age,
+    `$${Number(formData.salary).toLocaleString('en-US')}`,
+  ];
+
+  values.forEach((value) => {
+    const td = document.createElement('td');
+
+    td.textContent = value;
+    tr.appendChild(td);
+  });
+
+  tbody.appendChild(tr);
+
+  showNotification('Employee added successfully', 'success');
+
+  form.reset();
+});
