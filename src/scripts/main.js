@@ -5,11 +5,19 @@ const tbody = table.querySelector('tbody');
 const th = document.querySelectorAll('thead th');
 
 // ================= SORT =================
+let currentColumn = null;
+let currentDirection = 'asc';
+
 th.forEach((thItem, thIndex) => {
   thItem.addEventListener('click', () => {
-    const direction = thItem.dataset.direction === 'asc' ? 'desc' : 'asc';
-
-    thItem.dataset.direction = direction;
+    // якщо нова колонка → завжди ASC
+    if (currentColumn !== thIndex) {
+      currentDirection = 'asc';
+      currentColumn = thIndex;
+    } else {
+      // якщо та сама → toggle
+      currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+    }
 
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
@@ -23,10 +31,10 @@ th.forEach((thItem, thIndex) => {
       const bothNumbers = !isNaN(numA) && !isNaN(numB);
 
       if (bothNumbers) {
-        return direction === 'asc' ? numA - numB : numB - numA;
+        return currentDirection === 'asc' ? numA - numB : numB - numA;
       }
 
-      return direction === 'asc'
+      return currentDirection === 'asc'
         ? cellA.localeCompare(cellB)
         : cellB.localeCompare(cellA);
     });
@@ -62,7 +70,7 @@ function showNotification(message, type) {
   const notification = document.createElement('div');
 
   notification.textContent = message;
-  notification.classList.add(type); // error | success
+  notification.classList.add(type);
   notification.setAttribute('data-qa', 'notification');
 
   document.body.append(notification);
